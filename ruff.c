@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "tokenizer/tokenizer.h"
+#include "parser/parser.h"
 
 char *readFile(const char *filepath);
 
@@ -24,9 +25,13 @@ int	main(int argc, char *argv[]) {
 
     printTokens(&tokens);
 
+    ASTNode node = parser(&tokens);
+    printAST(&node, 0);
+
     // free
     free(code);
     freeTokenList(&tokens);
+    freeAST(&node);
 
     return 0;
 }
