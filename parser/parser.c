@@ -329,3 +329,89 @@ void printAST(ASTNode *node, int indent) {
             printf(" (unhandled)\n");
     }
 }
+
+void freeAST(ASTNode *node) {
+    if (!node) return;
+
+    switch (node->type) {
+
+        case NODE_PROGRAM:
+            for (int i = 0; i < node->as.program.count; i++) {
+                freeAST(node->as.program.statements[i]);
+            }
+            free(node->as.program.statements);
+            break;
+
+        case NODE_LITERAL:
+            if (node->as.literal.kind == LIT_STRING) {
+                free(node->as.literal.value.string);
+            }
+            break;
+
+        case NODE_VARIABLE:
+            free(node->as.variable.name);
+            break;
+
+        case NODE_BINARY:
+            freeAST(node->as.binary.left);
+            freeAST(node->as.binary.right);
+            break;
+
+        case NODE_UNARY:
+            freeAST(node->as.unary.expr);
+            break;
+
+        case NODE_IFSTMT:
+            freeAST(node->as.ifStmt.condition);
+            freeAST(node->as.ifStmt.thenBranch);
+            freeAST(node->as.ifStmt.elseBranch);
+            break;
+
+        case NODE_WHILESTMT:
+            freeAST(node->as.whileStmt.condition);
+            freeAST(node->as.whileStmt.body);
+            break;
+
+        case NODE_FORSTMT:
+            free(node->as.forStmt.varName);
+            freeAST(node->as.forStmt.iterable);
+            freeAST(node->as.forStmt.body);
+            break;
+
+        case NODE_VARDECL:
+            free(node->as.varDecl.name);
+            freeAST(node->as.varDecl.type);
+            freeAST(node->as.varDecl.value);
+            break;
+
+        case NODE_ASSIGN:
+            free(node->as.assign.name);
+            freeAST(node->as.assign.value);
+            break;
+
+        case NODE_FUNCDEF:
+            free(node->as.funcDef.name);
+            for (int i = 0; i < node->as.funcDef.paramCount; i++) {
+                freeAST(node->as.funcDef.params[i]);
+            }
+            free(node->as.funcDef.params);
+            freeAST(node->as.funcDef.body);
+            break;
+
+        case NODE_FUNCCALL:
+            free(node->as.funcCall.name);
+            for (int i = 0; i < node->as.funcCall.argCount; i++) {
+                freeAST(node->as.funcCall.args[i]);
+            }
+            free(node->as.funcCall.args);
+            break;
+
+        case NODE_BREAKSTMT:
+        case NODE_CONTINUESTMT:
+        case NODE_PASSSTMT:
+            /* 解放するものなし */
+            break;
+    }
+
+    free(node);
+}
