@@ -151,5 +151,7 @@ char *nodeTypeName(NodeType type);
 static void printLiteral(ASTNode *node);
 static void printIndent(int indent);
 void printAST(ASTNode *node, int indent);
+void freeAST(ASTNode *node);
+
 
 #endif
