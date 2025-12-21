@@ -2,19 +2,19 @@
 #include <stdlib.h>
 #include "parser.h"
 
-ASTNode parser(TokenList *list) {
-    return expr(list);
+ASTNode parser(Arena *arena, TokenList *list) {
+    return expr(arena, list);
 }
 
 // +と-
-ASTNode expr(TokenList *list) {
-    ASTNode node = term(list);
+ASTNode expr(Arena *arena, TokenList *list) {
+    ASTNode node = term(arena, list);
 
     while (peekToken(list)->type == TOKEN_PLUS
         || peekToken(list)->type == TOKEN_MINUS) {
         char *op = peekToken(list)->value;
 
-        ASTNode *_newNode = newNode(NODE_BINARY);
+        ASTNode *_newNode = newNode(arena, NODE_BINARY);
 
         // left
         ASTNode *left = malloc(sizeof(ASTNode));
@@ -32,7 +32,7 @@ ASTNode expr(TokenList *list) {
 
         // right
         ASTNode *right = malloc(sizeof(ASTNode));
-        *right = term(list);
+        *right = term(arena, list);
         _newNode->as.binary.right = right;
 
         node = *_newNode;
@@ -41,15 +41,16 @@ ASTNode expr(TokenList *list) {
     return node;
 }
 
-// *と/
-ASTNode term(TokenList *list) {
-    ASTNode node = factor(list);
+// *と/と%
+ASTNode term(Arena *arena, TokenList *list) {
+    ASTNode node = dot(arena, list);
 
     while (peekToken(list)->type == TOKEN_STAR
-        || peekToken(list)->type == TOKEN_SLASH) {
+        || peekToken(list)->type == TOKEN_SLASH
+        || peekToken(list)->type == TOKEN_PERCENT) {
         char *op = peekToken(list)->value;
 
-        ASTNode *_newNode = newNode(NODE_BINARY);
+        ASTNode *_newNode = newNode(arena, NODE_BINARY);
 
         // left
         ASTNode *left = malloc(sizeof(ASTNode));
@@ -61,14 +62,46 @@ ASTNode term(TokenList *list) {
             _newNode->as.binary.op = TOKEN_STAR;
         } else if (strcmp(op, "/") == 0) {
             _newNode->as.binary.op = TOKEN_SLASH;
+        } else if (strcmp(op, "%") == 0) {
+            _newNode->as.binary.op = TOKEN_PERCENT;
         }
+
         // 演算子を消費する
-        ASTNode *right = malloc(sizeof(ASTNode));
-        *right = factor(list);
-        _newNode->as.binary.right = right;
+        nextToken(list);
 
         // right
-        *_newNode->as.binary.right = factor(list);
+        ASTNode *right = malloc(sizeof(ASTNode));
+        *right = term(arena, list);
+        _newNode->as.binary.right = right;
+
+        node = *_newNode;
+    }
+
+    return node;
+}
+
+// .
+ASTNode dot(Arena *arena, TokenList *list) {
+    ASTNode node = factor(arena, list);
+
+    while (peekToken(list)->type == TOKEN_DOT) {
+        ASTNode *_newNode = newNode(arena, NODE_BINARY);
+        
+        // left
+        ASTNode *left = malloc(sizeof(ASTNode));
+        *left = node;
+        _newNode->as.binary.left = left;
+
+        // op
+        _newNode->as.binary.op = TOKEN_DOT;
+
+        // 演算子を消費する
+        nextToken(list);
+
+        // right
+        ASTNode *right = malloc(sizeof(ASTNode));
+        *right = factor(arena, list);
+        _newNode->as.binary.right = right;
 
         node = *_newNode;
     }
@@ -77,12 +110,12 @@ ASTNode term(TokenList *list) {
 }
 
 // ()
-ASTNode factor(TokenList *list) {
+ASTNode factor(Arena *arena, TokenList *list) {
     if (peekToken(list)->type == TOKEN_LPAREN) { // (
         // (を消費
         nextToken(list);
 
-        ASTNode node = expr(list);
+        ASTNode node = expr(arena, list);
 
         // この場合括弧が閉じられていないのでエラー
         if (peekToken(list)->type != TOKEN_RPAREN) { // )
@@ -95,12 +128,12 @@ ASTNode factor(TokenList *list) {
         return node;
 
     } else {
-        return literal(list);
+        return literal(arena, list);
     }
 }
 
-ASTNode literal(TokenList *list) {
-    ASTNode *lit = newNode(NODE_LITERAL);
+ASTNode literal(Arena *arena, TokenList *list) {
+    ASTNode *lit = newNode(arena, NODE_LITERAL);
     
     if (peekToken(list)->type == TOKEN_NUMBER) {
         lit->as.literal.kind = LIT_NUMBER;
@@ -128,11 +161,11 @@ ASTNode literal(TokenList *list) {
     return *lit;
 }
 
-ASTNode *newNode(NodeType type) {
-    ASTNode *n = malloc(sizeof(ASTNode));
-    memset(n, 0, sizeof(ASTNode));
-    n->type = type;
-    return n;
+ASTNode *newNode(Arena *arena, NodeType type) {
+    ASTNode *node = arenaAlloc(arena, sizeof(ASTNode));
+    memset(node, 0, sizeof(ASTNode));
+    node->type = type;
+    return node;
 }
 
 char *nodeTypeName(NodeType type) {
@@ -142,15 +175,16 @@ char *nodeTypeName(NodeType type) {
         case NODE_LITERAL:        return "literal";
         case NODE_BINARY:         return "binary";
         case NODE_UNARY:          return "unary";
-        case NODE_IFSTMT:         return "if";
-        case NODE_WHILESTMT:      return "while";
-        case NODE_FORSTMT:        return "for";
-        case NODE_BREAKSTMT:      return "break";
-        case NODE_CONTINUESTMT:   return "continue";
-        case NODE_PASSSTMT:       return "pass";
+        case NODE_IF:             return "if";
+        case NODE_WHILE:          return "while";
+        case NODE_FOR:            return "for";
+        case NODE_BREAK:          return "break";
+        case NODE_CONTINUE:       return "continue";
+        case NODE_PASS:           return "pass";
         case NODE_VARDECL:        return "varDecl";
         case NODE_ASSIGN:         return "assign";
         case NODE_FUNCDEF:        return "funcDef";
+        case NODE_RETURN:         return "return";
         case NODE_FUNCCALL:       return "funcCall";
         default:                  return "unknown";
     }
@@ -178,6 +212,12 @@ static void printIndent(int indent) {
 }
 
 void printAST(ASTNode *node, int indent) {
+    printf("====ast====\n");
+    _printAST(node, indent);
+    printf("========\n");
+}
+
+void _printAST(ASTNode *node, int indent) {
     if (!node) {
         printIndent(indent);
         printf("(null)\n");
@@ -192,7 +232,7 @@ void printAST(ASTNode *node, int indent) {
         case NODE_PROGRAM: {
             printf("\n");
             for (int i = 0; i < node->as.program.count; i++) {
-                printAST(node->as.program.statements[i], indent + 1);
+                _printAST(node->as.program.statements[i], indent + 1);
             }
             break;
         }
@@ -210,58 +250,58 @@ void printAST(ASTNode *node, int indent) {
 
         case NODE_BINARY: {
             printf(" op=%s\n", tokenTypeToString(node->as.binary.op));
-            printAST(node->as.binary.left, indent + 1);
-            printAST(node->as.binary.right, indent + 1);
+            _printAST(node->as.binary.left, indent + 1);
+            _printAST(node->as.binary.right, indent + 1);
             break;
         }
 
         case NODE_UNARY: {
             printf(" op=%d\n", node->as.unary.op);
-            printAST(node->as.unary.expr, indent + 1);
+            _printAST(node->as.unary.expr, indent + 1);
             break;
         }
 
-        case NODE_IFSTMT: {
+        case NODE_IF: {
             printf("\n");
 
             printIndent(indent + 1);
             printf("Condition:\n");
-            printAST(node->as.ifStmt.condition, indent + 2);
+            _printAST(node->as.ifStmt.condition, indent + 2);
 
             printIndent(indent + 1);
             printf("Then:\n");
-            printAST(node->as.ifStmt.thenBranch, indent + 2);
+            _printAST(node->as.ifStmt.thenBranch, indent + 2);
 
             if (node->as.ifStmt.elseBranch) {
                 printIndent(indent + 1);
                 printf("Else:\n");
-                printAST(node->as.ifStmt.elseBranch, indent + 2);
+                _printAST(node->as.ifStmt.elseBranch, indent + 2);
             }
             break;
         }
 
-        case NODE_WHILESTMT: {
+        case NODE_WHILE: {
             printf("\n");
             printIndent(indent + 1);
             printf("Condition:\n");
-            printAST(node->as.whileStmt.condition, indent + 2);
+            _printAST(node->as.whileStmt.condition, indent + 2);
 
             printIndent(indent + 1);
             printf("Body:\n");
-            printAST(node->as.whileStmt.body, indent + 2);
+            _printAST(node->as.whileStmt.body, indent + 2);
             break;
         }
 
-        case NODE_FORSTMT: {
+        case NODE_FOR: {
             printf(" var=%s\n", node->as.forStmt.varName);
 
             printIndent(indent + 1);
             printf("Iterable:\n");
-            printAST(node->as.forStmt.iterable, indent + 2);
+            _printAST(node->as.forStmt.iterable, indent + 2);
 
             printIndent(indent + 1);
             printf("Body:\n");
-            printAST(node->as.forStmt.body, indent + 2);
+            _printAST(node->as.forStmt.body, indent + 2);
             break;
         }
 
@@ -274,20 +314,20 @@ void printAST(ASTNode *node, int indent) {
             if (node->as.varDecl.type) {
                 printIndent(indent + 1);
                 printf("Type:\n");
-                printAST(node->as.varDecl.type, indent + 2);
+                _printAST(node->as.varDecl.type, indent + 2);
             }
 
             if (node->as.varDecl.value) {
                 printIndent(indent + 1);
                 printf("Init:\n");
-                printAST(node->as.varDecl.value, indent + 2);
+                _printAST(node->as.varDecl.value, indent + 2);
             }
             break;
         }
 
         case NODE_ASSIGN: {
             printf(" name=%s\n", node->as.assign.name);
-            printAST(node->as.assign.value, indent + 1);
+            _printAST(node->as.assign.value, indent + 1);
             break;
         }
 
@@ -298,14 +338,26 @@ void printAST(ASTNode *node, int indent) {
             );
 
             for (int i = 0; i < node->as.funcDef.paramCount; i++) {
-                printAST(node->as.funcDef.params[i], indent + 1);
+                _printAST(node->as.funcDef.params[i], indent + 1);
             }
 
             printIndent(indent + 1);
             printf("Body:\n");
-            printAST(node->as.funcDef.body, indent + 2);
+            _printAST(node->as.funcDef.body, indent + 2);
             break;
         }
+
+        case NODE_RETURN: {
+            printf("\n");
+
+            if (node->as.returnStmt.value) {
+                printIndent(indent + 1);
+                printf("Value:\n");
+                _printAST(node->as.returnStmt.value, indent + 2);
+            }
+
+            break;
+}
 
         case NODE_FUNCCALL: {
             printf(" name=%s args=%d\n",
@@ -314,14 +366,14 @@ void printAST(ASTNode *node, int indent) {
             );
 
             for (int i = 0; i < node->as.funcCall.argCount; i++) {
-                printAST(node->as.funcCall.args[i], indent + 1);
+                _printAST(node->as.funcCall.args[i], indent + 1);
             }
             break;
         }
 
-        case NODE_BREAKSTMT:
-        case NODE_CONTINUESTMT:
-        case NODE_PASSSTMT:
+        case NODE_BREAK:
+        case NODE_CONTINUE:
+        case NODE_PASS:
             printf("\n");
             break;
 
@@ -330,88 +382,26 @@ void printAST(ASTNode *node, int indent) {
     }
 }
 
-void freeAST(ASTNode *node) {
-    if (!node) return;
+void arenaInit(Arena *arena, size_t capacity) {
+    arena->memory = malloc(capacity);
+    arena->capacity = capacity;
+    arena->used = 0;
+}
 
-    switch (node->type) {
+void arenaFree(Arena *arena) {
+    free(arena->memory);
+    arena->memory = NULL;
+    arena->capacity = arena->used = 0;
+}
 
-        case NODE_PROGRAM:
-            for (int i = 0; i < node->as.program.count; i++) {
-                freeAST(node->as.program.statements[i]);
-            }
-            free(node->as.program.statements);
-            break;
+void *arenaAlloc(Arena *arena, size_t size) {
+    size = (size + 7) & ~7; // 8byte alignment
 
-        case NODE_LITERAL:
-            if (node->as.literal.kind == LIT_STRING) {
-                free(node->as.literal.value.string);
-            }
-            break;
-
-        case NODE_VARIABLE:
-            free(node->as.variable.name);
-            break;
-
-        case NODE_BINARY:
-            freeAST(node->as.binary.left);
-            freeAST(node->as.binary.right);
-            break;
-
-        case NODE_UNARY:
-            freeAST(node->as.unary.expr);
-            break;
-
-        case NODE_IFSTMT:
-            freeAST(node->as.ifStmt.condition);
-            freeAST(node->as.ifStmt.thenBranch);
-            freeAST(node->as.ifStmt.elseBranch);
-            break;
-
-        case NODE_WHILESTMT:
-            freeAST(node->as.whileStmt.condition);
-            freeAST(node->as.whileStmt.body);
-            break;
-
-        case NODE_FORSTMT:
-            free(node->as.forStmt.varName);
-            freeAST(node->as.forStmt.iterable);
-            freeAST(node->as.forStmt.body);
-            break;
-
-        case NODE_VARDECL:
-            free(node->as.varDecl.name);
-            freeAST(node->as.varDecl.type);
-            freeAST(node->as.varDecl.value);
-            break;
-
-        case NODE_ASSIGN:
-            free(node->as.assign.name);
-            freeAST(node->as.assign.value);
-            break;
-
-        case NODE_FUNCDEF:
-            free(node->as.funcDef.name);
-            for (int i = 0; i < node->as.funcDef.paramCount; i++) {
-                freeAST(node->as.funcDef.params[i]);
-            }
-            free(node->as.funcDef.params);
-            freeAST(node->as.funcDef.body);
-            break;
-
-        case NODE_FUNCCALL:
-            free(node->as.funcCall.name);
-            for (int i = 0; i < node->as.funcCall.argCount; i++) {
-                freeAST(node->as.funcCall.args[i]);
-            }
-            free(node->as.funcCall.args);
-            break;
-
-        case NODE_BREAKSTMT:
-        case NODE_CONTINUESTMT:
-        case NODE_PASSSTMT:
-            /* 解放するものなし */
-            break;
+    if (arena->used + size > arena->capacity) {
+        return NULL; // 足りない（本番では assert）
     }
 
-    free(node);
+    void *ptr = arena->memory + arena->used;
+    arena->used += size;
+    return ptr;
 }
