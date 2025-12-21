@@ -7,6 +7,7 @@ typedef enum {
     // インデント
     TOKEN_NEWLINE,
     TOKEN_INDENT,
+    TOKEN_DEDENT,
 
     // リテラル
     TOKEN_IDENT, // a
