@@ -11,11 +11,43 @@ TokenList tokenizer(char *code) {
         char c = code[i];
 
         switch (c) {
-        //空白
-        case ' ':
-        case '\t':
-        case '\n':
+        // インデント
         case '\r':
+            if (code[i + 1] == '\n') {
+                i++; // '\n' をスキップ
+            }
+            // printTokensで改行されないように\\n
+            addToken(&list, TOKEN_NEWLINE, "\\n");
+            i++;
+            break;
+        
+        case '\n':
+            // printTokensで改行されないように\\n
+            addToken(&list, TOKEN_NEWLINE, "\\n");
+            i++;
+            break;
+
+        case ' ':
+            // 4の倍数だったらインデント、そうじゃなかったら無視
+            // 最初の空白を飛ばす
+            i++;
+            int count = 1;
+
+            while ((code[i] == ' ') && code[i] != '\0') {
+                count++;
+                i++;
+            }
+
+            if ((count % 4) == 0) {
+                for (int j = 1; j <= (count / 4); j++) {
+                    addToken(&list, TOKEN_INDENT, "    ");
+                }
+            }
+
+            break;
+
+        case '\t':
+            addToken(&list, TOKEN_INDENT, "\t");
             i++;
             break;
 
@@ -74,6 +106,11 @@ TokenList tokenizer(char *code) {
             i++;
             break;
 
+        case '%':
+            addToken(&list, TOKEN_PERCENT, "%");
+            i++;
+            break;
+
         case '(':
             addToken(&list, TOKEN_LPAREN, "(");
             i++;
@@ -94,8 +131,49 @@ TokenList tokenizer(char *code) {
             i++;
             break;
 
+        case '<':
+            i++;
+            if (code[i] == '=') {
+                i++;
+                addToken(&list, TOKEN_LE, "<=");
+            } else {
+                addToken(&list, TOKEN_LT, "<");
+            }
+            break;
+
+        case '>':
+            i++;
+            if (code[i] == '=') {
+                i++;
+                addToken(&list, TOKEN_GE, ">=");
+            } else {
+                addToken(&list, TOKEN_GT, ">");
+            }
+            break;
+
         case '=':
-            addToken(&list, TOKEN_ASSIGN, "=");
+            i++;
+            if (code[i] == '=') {
+                i++;
+                addToken(&list, TOKEN_EQ, "==");
+            } else {
+                addToken(&list, TOKEN_ASSIGN, "=");
+            }
+            break;
+
+        case '!':
+            i++;
+            if (code[i] == '=') {
+                i++;
+                addToken(&list, TOKEN_NE, "!=");
+            } else {
+                // 許容されていない文字
+                printf("during lexical analysis, an invalid character was detected\ncharacter: !\n");
+            }
+            break;
+
+        case '.':
+            addToken(&list, TOKEN_DOT, ".");
             i++;
             break;
         
@@ -174,6 +252,8 @@ TokenType checkTokenType(char *ident) {
         return TOKEN_WHILE;
     } else if (strcmp(ident, "for") == 0) {
         return TOKEN_FOR;
+    } else if (strcmp(ident, "in") == 0) {
+        return TOKEN_IN;
     } else if (strcmp(ident, "return") == 0) {
         return TOKEN_RETURN;
     } else if (strcmp(ident, "func") == 0) {
@@ -228,6 +308,10 @@ const char *tokenTypeToString(TokenType type) {
     switch (type) {
         case TOKEN_EOF:      return "EOF";
 
+        // インデント
+        case TOKEN_NEWLINE:  return "NEWLINE";
+        case TOKEN_INDENT:   return "INDENT";
+
         // リテラル
         case TOKEN_IDENT:    return "IDENT";
         case TOKEN_NUMBER:   return "NUMBER";
@@ -239,6 +323,7 @@ const char *tokenTypeToString(TokenType type) {
         case TOKEN_ELSE:     return "ELSE";
         case TOKEN_WHILE:    return "WHILE";
         case TOKEN_FOR:      return "FOR";
+        case TOKEN_IN:       return "IN";
         case TOKEN_RETURN:   return "RETURN";
         case TOKEN_PASS:     return "PASS";
         case TOKEN_FUNC:     return "FUNC";
@@ -254,12 +339,20 @@ const char *tokenTypeToString(TokenType type) {
         case TOKEN_MINUS:    return "MINUS";
         case TOKEN_STAR:     return "STAR";
         case TOKEN_SLASH:    return "SLASH";
+        case TOKEN_PERCENT:  return "PERCENT"; 
         case TOKEN_LPAREN:   return "LPAREN";
         case TOKEN_RPAREN:   return "RPAREN";
         case TOKEN_COLON:    return "COLON";
         case TOKEN_ARROW:    return "ARROW";
         case TOKEN_COMMA:    return "COMMA";
         case TOKEN_ASSIGN:   return "ASSIGN";
+        case TOKEN_DOT:      return "DOT";
+        case TOKEN_LT:       return "LT";
+        case TOKEN_LE:       return "LE";
+        case TOKEN_GT:       return "GT";
+        case TOKEN_GE:       return "GE";
+        case TOKEN_EQ:       return "EQ";
+        case TOKEN_NE:       return "NE";
 
         default:             return "UNKNOWN";
     }
