@@ -4,6 +4,10 @@
 typedef enum {
     TOKEN_EOF = 0,
 
+    // インデント
+    TOKEN_NEWLINE,
+    TOKEN_INDENT,
+
     // リテラル
     TOKEN_IDENT, // a
     TOKEN_NUMBER, // 1
@@ -15,6 +19,7 @@ typedef enum {
     TOKEN_ELSE, // else
     TOKEN_WHILE, // while
     TOKEN_FOR, // for
+    TOKEN_IN, // in
     TOKEN_RETURN, // return
     TOKEN_PASS, // pass
     TOKEN_FUNC, // func
@@ -25,15 +30,23 @@ typedef enum {
     TOKEN_TRUE, // true
     TOKEN_FALSE, // false
 
-    // 記号
-    TOKEN_PLUS, // +
-    TOKEN_MINUS, // -
-    TOKEN_STAR, // *
-    TOKEN_SLASH, // /
+    // 記号（優先度順）
     TOKEN_LPAREN, // (
     TOKEN_RPAREN, // )
-    TOKEN_COLON, // :
+    TOKEN_DOT, // .
+    TOKEN_STAR, // *
+    TOKEN_SLASH, // /
+    TOKEN_PERCENT, // %
+    TOKEN_PLUS, // +
+    TOKEN_MINUS, // -
+    TOKEN_LT, // <
+    TOKEN_LE, // <=
+    TOKEN_GT, // >
+    TOKEN_GE, // >=
+    TOKEN_EQ, // ==
+    TOKEN_NE, // !=
     TOKEN_ARROW, // ->
+    TOKEN_COLON, // :
     TOKEN_COMMA, // ,
     TOKEN_ASSIGN, // =
 
