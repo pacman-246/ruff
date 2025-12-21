@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "tokenizer/tokenizer.h"
 #include "parser/parser.h"
+#include "run/run.h"
 
 char *readFile(const char *filepath);
 
@@ -25,13 +26,18 @@ int	main(int argc, char *argv[]) {
 
     printTokens(&tokens);
 
-    ASTNode node = parser(&tokens);
+    Arena arena;
+    arenaInit(&arena, 1024 * 1024); // 1MB
+
+    ASTNode node = parser(&arena, &tokens);
     printAST(&node, 0);
+
+    run(&node);
 
     // free
     free(code);
     freeTokenList(&tokens);
-    freeAST(&node);
+    arenaFree(&arena);
 
     return 0;
 }
