@@ -22,15 +22,16 @@ typedef enum {
     NODE_VARIABLE,
     NODE_BINARY,
     NODE_UNARY,
-    NODE_IFSTMT,
-    NODE_WHILESTMT,
-    NODE_FORSTMT,
-    NODE_BREAKSTMT,
-    NODE_CONTINUESTMT,
-    NODE_PASSSTMT,
+    NODE_IF,
+    NODE_WHILE,
+    NODE_FOR,
+    NODE_BREAK,
+    NODE_CONTINUE,
+    NODE_PASS,
     NODE_VARDECL,
     NODE_ASSIGN,
     NODE_FUNCDEF,
+    NODE_RETURN,
     NODE_FUNCCALL
 
 } NodeType;
@@ -131,6 +132,11 @@ struct ASTNode {
             ASTNode *body;
         } funcDef;
 
+        // return文
+        struct {
+            ASTNode *value;
+        } returnStmt;
+
         // 関数呼び出し
         struct {
             char *name;
@@ -141,17 +147,27 @@ struct ASTNode {
     } as;
 };
 
-ASTNode parser(TokenList *list);
-ASTNode expr(TokenList *list);
-ASTNode term(TokenList *list);
-ASTNode factor(TokenList *list);
-ASTNode literal(TokenList *list);
-ASTNode *newNode(NodeType type);
+// ASTNodeのfreeを軽量化するためのArena
+typedef struct {
+    unsigned char *memory;
+    size_t capacity;
+    size_t used;
+} Arena;
+
+ASTNode parser(Arena *arena, TokenList *list);
+ASTNode expr(Arena *arena, TokenList *list);
+ASTNode term(Arena *arena, TokenList *list);
+ASTNode dot(Arena *arena, TokenList *list);
+ASTNode factor(Arena *arena, TokenList *list);
+ASTNode literal(Arena *arena, TokenList *list);
+ASTNode *newNode(Arena *arena, NodeType type);
 char *nodeTypeName(NodeType type);
 static void printLiteral(ASTNode *node);
 static void printIndent(int indent);
 void printAST(ASTNode *node, int indent);
-void freeAST(ASTNode *node);
-
+void _printAST(ASTNode *node, int indent);
+void arenaInit(Arena *arena, size_t capacity);
+void arenaFree(Arena *arena);
+void *arenaAlloc(Arena *arena, size_t size);
 
 #endif
