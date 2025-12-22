@@ -5,6 +5,7 @@
 #include "run/run.h"
 
 char *readFile(const char *filepath);
+char *replaceTabWithSpaces(const char *src);
 
 //------------------------メイン------------------------
 
@@ -18,9 +19,12 @@ int	main(int argc, char *argv[]) {
     //ファイルを読み込む
     char *filepath = argv[2];
     //33行を参照
-    char *code = readFile(filepath);
+    char *rawCode = readFile(filepath);
     
-    printf("====code====\n%s\n========\n", code);
+    printf("====code====\n%s\n========\n", rawCode);
+
+    // トークナイザーで認識しやするするために\tを半角空白四文字に変換
+    char *code = replaceTabWithSpaces(rawCode);
 
     TokenList tokens = tokenizer(code);
 
@@ -72,4 +76,36 @@ char *readFile(const char *filepath) {
 
     fclose(fp);
     return buffer;
+}
+
+char *replaceTabWithSpaces(const char *src) {
+    int i, len = 0;
+
+    // 必要な長さを計算
+    for (i = 0; src[i] != '\0'; i++) {
+        if (src[i] == '\t')
+            len += 4;
+        else
+            len += 1;
+    }
+
+    // メモリ確保
+    char *dst = malloc(len + 1);
+    if (!dst) return NULL;
+
+    // 変換
+    int j = 0;
+    for (i = 0; src[i] != '\0'; i++) {
+        if (src[i] == '\t') {
+            dst[j++] = ' ';
+            dst[j++] = ' ';
+            dst[j++] = ' ';
+            dst[j++] = ' ';
+        } else {
+            dst[j++] = src[i];
+        }
+    }
+    dst[j] = '\0';
+
+    return dst;
 }
