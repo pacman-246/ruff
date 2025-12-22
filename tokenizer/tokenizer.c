@@ -1,14 +1,49 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include "tokenizer.h"
 
 TokenList tokenizer(char *code) {
     TokenList list = {0};
     size_t i = 0;
+    int nowIndentCount = 0;
+    int lastIndentCount = 0;
+    // 一行目の最初も行の最初として扱ってほしいためtrue
+    bool afterNewline = true;
 
     while (code[i] != '\0') {
         char c = code[i];
+
+        // 行の最初だった場合はインデントの処理をする
+        if (afterNewline) {
+            if (c == ' ') {
+                // 最初の空白を飛ばす
+                i++;
+                int count = 1;
+                while ((code[i] == ' ') && code[i] != '\0') {
+                    count++;
+                    i++;
+                }
+
+                if ((count % 4) == 0) {
+                    nowIndentCount = (count / 4);
+                }
+
+            }
+
+            // インデントが増えている場合はその差分INDENTを追加する
+            // インデントが減っている場合はその差分DEDENTを追加する
+            if (nowIndentCount > lastIndentCount) {
+                for (int j = 1; j <= (nowIndentCount - lastIndentCount); j++) {
+                    addToken(&list, TOKEN_INDENT, "    ");
+                }
+            } else if (nowIndentCount < lastIndentCount) {
+                for (int j = 1; j <= (lastIndentCount - nowIndentCount); j++) {
+                    addToken(&list, TOKEN_DEDENT, "");
+                }
+            }
+        }
 
         switch (c) {
         // インデント
@@ -18,37 +53,26 @@ TokenList tokenizer(char *code) {
             }
             // printTokensで改行されないように\\n
             addToken(&list, TOKEN_NEWLINE, "\\n");
+            lastIndentCount = nowIndentCount;
+            nowIndentCount = 0;
             i++;
             break;
         
         case '\n':
             // printTokensで改行されないように\\n
             addToken(&list, TOKEN_NEWLINE, "\\n");
+            lastIndentCount = nowIndentCount;
+            nowIndentCount = 0;
             i++;
             break;
 
         case ' ':
-            // 4の倍数だったらインデント、そうじゃなかったら無視
-            // 最初の空白を飛ばす
-            i++;
-            int count = 1;
-
-            while ((code[i] == ' ') && code[i] != '\0') {
-                count++;
+            // 行の最初だった場合ももう処理されてるので何もしない
+            // 行の途中だった場合は飛ばす
+            if (!afterNewline) {
                 i++;
             }
 
-            if ((count % 4) == 0) {
-                for (int j = 1; j <= (count / 4); j++) {
-                    addToken(&list, TOKEN_INDENT, "    ");
-                }
-            }
-
-            break;
-
-        case '\t':
-            addToken(&list, TOKEN_INDENT, "\t");
-            i++;
             break;
 
         //文字列
@@ -221,6 +245,12 @@ TokenList tokenizer(char *code) {
             }
             break;
         }
+
+        if (c == '\n' || c == '\r') {
+            afterNewline = true;
+        } else {
+            afterNewline = false;
+        }
     }
 
     addToken(&list, TOKEN_EOF, NULL);
@@ -311,6 +341,7 @@ const char *tokenTypeToString(TokenType type) {
         // インデント
         case TOKEN_NEWLINE:  return "NEWLINE";
         case TOKEN_INDENT:   return "INDENT";
+        case TOKEN_DEDENT:   return "DEDENT";
 
         // リテラル
         case TOKEN_IDENT:    return "IDENT";
