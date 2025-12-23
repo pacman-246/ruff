@@ -1,0 +1,72 @@
+<program> ::= <statement_list>
+<statement_list> ::= <statement>
+    | <statement_list> <statement>
+<statement> ::=
+    <simple_stmt> <NEWLINE>
+    | <compound_stmt>
+<simple_stmt> ::=
+    <var_decl>
+    | <assignment>
+    | <return_stmt>
+    | <break_stmt>
+    | <continue_stmt>
+    | <pass_stmt>
+    | <expression>
+<break_stmt>     ::= "break"
+<continue_stmt> ::= "continue"
+<pass_stmt>     ::= "pass"
+<return_stmt> ::= "return" [ <expression> ]
+<compound_stmt> ::=
+    <if_stmt>
+    | <while_stmt>
+    | <for_stmt>
+    | <func_def>
+<if_stmt> ::=
+    "if" <expression> ":" <NEWLINE>
+    <INDENT> <statement_list>
+    [ <elif_part> ]
+    [ <else_part> ]
+<elif_part> ::=
+    "elif" <expression> ":" <NEWLINE>
+    <INDENT> <statement_list>
+    [ <elif_part> ]
+<else_part> ::=
+    "else" ":" <NEWLINE>
+    <INDENT> <statement_list>
+<while_stmt> ::=
+    "while" <expression> ":" <NEWLINE>
+    <INDENT> <statement_list>
+<for_stmt> ::=
+    "for" <IDENT> "in" <expression> ":" <NEWLINE>
+    <INDENT> <statement_list>
+<var_decl> ::=
+    "var" <IDENT> ":" <expression>  "=" <expression>
+    | "let" <IDENT> ":" <expression> "=" <expression>
+<assignment> ::= <IDENT> "=" <expression>
+<func_def> ::=
+    "func" <IDENT> "(" [ <param_list> ] ")"  ":" <NEWLINE>
+    <INDENT> <statement_list>
+<param_list> ::= <IDENT>
+    | <param_list> "," <IDENT>
+<expression> ::= <comparison>
+<comparison> ::= <additive>
+    | <comparison> ("==" | "!=" | "<" | "<=" | ">" | ">=") <additive>
+<additive> ::= <multiplicative>
+    | <additive> ("+" | "-") <multiplicative>
+<multiplicative> ::= <unary>
+    | <multiplicative> ("*" | "/" | "%") <unary>
+<unary> ::= ("+" | "-" ) <unary>
+    | <postfix>
+<postfix> ::= <primary>
+    | <postfix> "." <IDENT>
+    | <postfix> "(" [ <arg_list> ] ")"
+<arg_list> ::= <expression>
+    | <arg_list> "," <expression>
+<primary> ::=
+    <literal>
+    | <IDENT>
+    | "(" <expression> ")"
+<literal> ::= <NUMBER>
+    | <STRING>
+    | "true"
+    | "false"
