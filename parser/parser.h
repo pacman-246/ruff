@@ -16,12 +16,13 @@ typedef enum {
 } LiteralKind;
 
 typedef enum {
-    NODE_PROGRAM,
+    // 引数のない関数など
+    NODE_EMPTY,
 
+    NODE_PROGRAM,
     NODE_LITERAL,
-    NODE_VARIABLE,
+    NODE_IDENT,
     NODE_BINARY,
-    NODE_UNARY,
     NODE_IF,
     NODE_WHILE,
     NODE_FOR,
@@ -32,7 +33,8 @@ typedef enum {
     NODE_ASSIGN,
     NODE_FUNCDEF,
     NODE_RETURN,
-    NODE_FUNCCALL
+    NODE_FUNCCALL,
+    NODE_COMMA,
 
 } NodeType;
 
@@ -43,8 +45,8 @@ struct ASTNode {
 
     union {
         struct {
-            ASTNode **statements;
-            int count;
+            ASTNode *left;
+            ASTNode *right;
         } program;
 
         // リテラル
@@ -57,10 +59,10 @@ struct ASTNode {
             } value;
         } literal;
 
-        // 変数名
+        // 識別子
         struct {
             char *name;
-        } variable;
+        } ident;
         
         // 二項演算
         struct {
@@ -68,12 +70,6 @@ struct ASTNode {
             ASTNode *right;
             TokenType op;
         } binary;
-
-        // 単項演算（++、--など）
-        struct {
-            ASTNode *expr;
-            TokenType op;
-        } unary;
 
         // if文
         struct {
@@ -139,10 +135,15 @@ struct ASTNode {
 
         // 関数呼び出し
         struct {
-            char *name;
-            ASTNode **args;
-            int argCount;
+            ASTNode *name; // fmt.printlnのような形の関数だからあえてASTNode
+            ASTNode *args;
         } funcCall;
+
+        // コンマ
+        struct {
+            ASTNode *left;
+            ASTNode *right;
+        } comma;
 
     } as;
 };
@@ -155,11 +156,15 @@ typedef struct {
 } Arena;
 
 ASTNode parser(Arena *arena, TokenList *list);
-ASTNode expr(Arena *arena, TokenList *list);
-ASTNode term(Arena *arena, TokenList *list);
-ASTNode dot(Arena *arena, TokenList *list);
-ASTNode factor(Arena *arena, TokenList *list);
-ASTNode literal(Arena *arena, TokenList *list);
+ASTNode *program(Arena *arena, TokenList *list);
+ASTNode *comparison(Arena *arena, TokenList *list);
+ASTNode *additive(Arena *arena, TokenList *list);
+ASTNode *multiplicative(Arena *arena, TokenList *list);
+ASTNode *postfix(Arena *arena, TokenList *list);
+ASTNode *comma(Arena *arena, TokenList *list);
+ASTNode *primary(Arena *arena, TokenList *list);
+ASTNode *literal(Arena *arena, TokenList *list);
+ASTNode *ident(Arena *arena, TokenList *list);
 ASTNode *newNode(Arena *arena, NodeType type);
 char *nodeTypeName(NodeType type);
 static void printLiteral(ASTNode *node);
