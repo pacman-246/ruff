@@ -11,12 +11,13 @@ TokenList tokenizer(char *code) {
     int lastIndentCount = 0;
     // 一行目の最初も行の最初として扱ってほしいためtrue
     bool afterNewline = true;
+    bool inParen = false;
 
     while (code[i] != '\0') {
         char c = code[i];
 
-        // 行の最初だった場合はインデントの処理をする
-        if (afterNewline) {
+        // 行の最初尚且つ括弧の中じゃなかった場合はインデントの処理をする
+        if (afterNewline && !inParen) {
             if (c == ' ') {
                 // 最初の空白を飛ばす
                 i++;
@@ -48,6 +49,11 @@ TokenList tokenizer(char *code) {
         switch (c) {
         // インデント
         case '\r':
+            if (inParen) {
+                i++;
+                break;
+            }
+
             if (code[i + 1] == '\n') {
                 i++; // '\n' をスキップ
             }
@@ -59,6 +65,11 @@ TokenList tokenizer(char *code) {
             break;
         
         case '\n':
+            if (inParen) {
+                i++;
+                break;
+            }
+
             // printTokensで改行されないように\\n
             addToken(&list, TOKEN_NEWLINE, "\\n");
             lastIndentCount = nowIndentCount;
@@ -68,8 +79,8 @@ TokenList tokenizer(char *code) {
 
         case ' ':
             // 行の最初だった場合ももう処理されてるので何もしない
-            // 行の途中だった場合は飛ばす
-            if (!afterNewline) {
+            // 行の途中または括弧の中だった場合は飛ばす
+            if (!afterNewline || inParen) {
                 i++;
             }
 
@@ -138,11 +149,13 @@ TokenList tokenizer(char *code) {
         case '(':
             addToken(&list, TOKEN_LPAREN, "(");
             i++;
+            inParen = true;
             break;
 
         case ')':
             addToken(&list, TOKEN_RPAREN, ")");
             i++;
+            inParen = false;
             break;
 
         case ':':
@@ -314,7 +327,8 @@ Token *nextToken(TokenList *list) {
     if (list->pos >= list->count) {
         return NULL;
     }
-    return &list->tokens[list->pos++];
+    // 次のトークンを返したいため後置インクリメント
+    return &list->tokens[++list->pos];
 }
 
 // TokenListをfreeする
