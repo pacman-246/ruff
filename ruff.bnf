@@ -1,3 +1,4 @@
+// ここはちゃんと書けてないところあるから間に受けないでね
 <program> ::= <statement_list>
 <statement_list> ::= <statement>
     | <statement_list> <statement>
@@ -46,22 +47,13 @@
 <func_def> ::=
     "func" <IDENT> "(" [ <param_list> ] ")"  ":" <NEWLINE>
     <INDENT> <statement_list>
-<param_list> ::= <IDENT>
-    | <param_list> "," <IDENT>
+<param_list> ::= (<IDENT> ":" <expression>)+
 <expression> ::= <comparison>
-<comparison> ::= <additive>
-    | <comparison> ("==" | "!=" | "<" | "<=" | ">" | ">=") <additive>
-<additive> ::= <multiplicative>
-    | <additive> ("+" | "-") <multiplicative>
-<multiplicative> ::= <unary>
-    | <multiplicative> ("*" | "/" | "%") <unary>
-<unary> ::= ("+" | "-" ) <unary>
-    | <postfix>
-<postfix> ::= <primary>
-    | <postfix> "." <IDENT>
-    | <postfix> "(" [ <arg_list> ] ")"
-<arg_list> ::= <expression>
-    | <arg_list> "," <expression>
+<comparison> ::= <additive> (("==" | "!=" | "<" | "<=" | ">" | ">=") <additive>)*
+<additive> ::= <multiplicative> (("+" | "-") <multiplicative>)*
+<multiplicative> ::= <postfix> (("*" | "/" | "%") <postfix>)*
+<postfix> ::= <primary> ("." <ident> | "(" [ <comma> ] ")")*
+<comma> ::= <expression> ("," <expression>)*
 <primary> ::=
     <literal>
     | <IDENT>
