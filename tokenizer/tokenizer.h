@@ -22,6 +22,8 @@ typedef enum {
     TOKEN_FOR, // for
     TOKEN_IN, // in
     TOKEN_RETURN, // return
+    TOKEN_BREAK, // break
+    TOKEN_CONTINUE, // continue
     TOKEN_PASS, // pass
     TOKEN_FUNC, // func
     TOKEN_VAR, // var
@@ -56,6 +58,8 @@ typedef enum {
 typedef struct {
     TokenType type;
     char *value;
+    // エラーのときエラーが起きている行を特定できるようになる
+    int pos;
 } Token;
 
 typedef struct {
@@ -66,7 +70,7 @@ typedef struct {
 } TokenList;
 
 TokenList tokenizer(char *code);
-static void addToken(TokenList *list, TokenType type, const char *value);
+static void addToken(TokenList *list, TokenType type, const char *value, int pos);
 TokenType checkTokenType(char *ident);
 Token *peekToken(TokenList *list);
 Token *nextToken(TokenList *list);
