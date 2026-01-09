@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "parser.h"
+//#include "../utils/utils.h"
 
 ASTNode parser(Arena *arena, TokenList *list) {
     return *program(arena, list);
@@ -8,7 +9,7 @@ ASTNode parser(Arena *arena, TokenList *list) {
 
 // 複数文
 ASTNode *program(Arena* arena, TokenList *list) {
-    ASTNode *node = comparison(arena, list);
+    ASTNode *node = statement(arena, list);
 
     while (peekToken(list)->type == TOKEN_NEWLINE) {
         Token *t = nextToken(list);
@@ -16,7 +17,7 @@ ASTNode *program(Arena* arena, TokenList *list) {
             break;
         }
 
-        ASTNode *right = comparison(arena, list);
+        ASTNode *right = statement(arena, list);
 
         ASTNode *newNode_ = newNode(arena, NODE_PROGRAM);
         newNode_->as.program.left = node;
@@ -27,6 +28,114 @@ ASTNode *program(Arena* arena, TokenList *list) {
 
     return node;
 }
+
+// 文
+ASTNode *statement(Arena *arena, TokenList *list) {
+    if (peekToken(list)->type == TOKEN_VAR
+        || peekToken(list)-> type == TOKEN_LET) {
+        return varDecl(arena, list);
+
+    } else if (peekToken(list)->type == TOKEN_IDENT
+        && list->tokens[list->pos + 1].type == TOKEN_ASSIGN) {
+        return assignment(arena, list);
+
+    } else if (peekToken(list)->type == TOKEN_RETURN) {
+        return returnStmt(arena, list);
+
+    } else if (peekToken(list)->type == TOKEN_BREAK) {
+        nextToken(list);
+        return newNode(arena, NODE_BREAK);
+
+    } else if (peekToken(list)->type == TOKEN_CONTINUE) {
+        nextToken(list);
+        return newNode(arena, NODE_CONTINUE);
+
+    } else if (peekToken(list)->type == TOKEN_PASS) {
+        nextToken(list);
+        return newNode(arena, NODE_PASS);
+
+    // } else if (peekToken(list)->type == TOKEN_IF) {
+    //     return ifStmt(arena, list);
+
+    } else {
+        return comparison(arena, list);
+    }
+}
+
+// 定義
+ASTNode *varDecl(Arena *arena, TokenList *list) {
+    TokenType varOrLet = peekToken(list)->type;
+    // varかletを消費
+    nextToken(list);
+
+    ASTNode *name = ident(arena, list);
+
+    if (peekToken(list)->type != TOKEN_COLON) {
+        printf("the type is not specified when defining a variable or constant\n");
+        exit(1);
+    }
+    // :を消費
+    nextToken(list);
+
+    ASTNode *type = comparison(arena, list);
+
+    if (peekToken(list)->type != TOKEN_ASSIGN) {
+        printf("var or let is written but = is not written\n");
+        exit(1);
+    }
+    // =を消費
+    nextToken(list);
+
+    ASTNode *value = comparison(arena, list);
+
+    ASTNode *node = newNode(arena, NODE_VARDECL);
+    if (varOrLet == TOKEN_VAR) {
+        node->as.varDecl.kind = DECL_VAR;
+    } else { // let
+        node->as.varDecl.kind = DECL_LET;
+    }
+    node->as.varDecl.name = name->as.ident.name;
+    node->as.varDecl.type = type;
+    node->as.varDecl.value = value;
+
+    return node;
+}
+
+// 代入
+ASTNode *assignment(Arena *arena, TokenList *list) {
+    ASTNode *name = ident(arena, list);
+
+    // =を消費
+    nextToken(list);
+
+    ASTNode *value = comparison(arena, list);
+
+    ASTNode *node = newNode(arena, NODE_ASSIGN);
+    node->as.assign.name = name->as.ident.name;
+    node->as.assign.value = value;
+
+    return node;
+}
+
+// return文
+ASTNode *returnStmt(Arena *arena, TokenList * list) {
+    // returnを消費
+    nextToken(list);
+
+    ASTNode *value = comparison(arena, list);
+
+    ASTNode *node = newNode(arena, NODE_RETURN);
+    node->as.returnStmt.value = value;
+
+    return node;
+}
+
+// // if文
+// ASTNode *ifStmt(Arena *arena, TokenList * list) {
+//     // ifを消費
+//     nextToken(list);
+    
+// }
 
 // 比較演算子
 ASTNode *comparison(Arena *arena, TokenList *list) {
