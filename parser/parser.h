@@ -157,6 +157,11 @@ typedef struct {
 
 ASTNode parser(Arena *arena, TokenList *list);
 ASTNode *program(Arena *arena, TokenList *list);
+ASTNode *statement(Arena *arena, TokenList *list);
+ASTNode *varDecl(Arena *arena, TokenList *list);
+ASTNode *assignment(Arena *arena, TokenList *list);
+ASTNode *returnStmt(Arena *arena, TokenList * list);
+// ASTNode *ifStmt(Arena *arena, TokenList * list);
 ASTNode *comparison(Arena *arena, TokenList *list);
 ASTNode *additive(Arena *arena, TokenList *list);
 ASTNode *multiplicative(Arena *arena, TokenList *list);
@@ -176,3 +181,32 @@ void arenaFree(Arena *arena);
 void *arenaAlloc(Arena *arena, size_t size);
 
 #endif
+
+//ctx作れ
+//ctx作れctx作れ
+
+//ctx作れctx作れ
+
+//ctx作れctx作れ
+
+//ctx作れctx作れ
+
+//ctx作れctx作れ
+
+//ctx作れctx作れ
+
+//ctx作れctx作れ
+
+//ctx作れctx作れ
+
+//ctx作れctx作れ
+
+//ctx作れctx作れ
+
+//ctx作れctx作れ
+
+//ctx作れctx作れ
+
+
+//ctx作れctx作れ
+
