@@ -3,12 +3,14 @@
 #include <string.h>
 #include <stdbool.h>
 #include "tokenizer.h"
+#include "../utils/utils.h"
 
 TokenList tokenizer(char *code) {
     TokenList list = {0};
     size_t i = 0;
     int nowIndentCount = 0;
     int lastIndentCount = 0;
+    int nowLine = 1;
     // 一行目の最初も行の最初として扱ってほしいためtrue
     bool afterNewline = true;
     bool inParen = false;
@@ -33,15 +35,28 @@ TokenList tokenizer(char *code) {
 
             }
 
-            // インデントが増えている場合はその差分INDENTを追加する
-            // インデントが減っている場合はその差分DEDENTを追加する
+            char str[20];
+            if (nowIndentCount != lastIndentCount) {
+                sprintf(str, "%d", nowIndentCount);
+            }
+
+            // インデントが増えている場合はINDENTを追加する
+            // インデントが減っている場合はDEDENTを追加する
             if (nowIndentCount > lastIndentCount) {
                 for (int j = 1; j <= (nowIndentCount - lastIndentCount); j++) {
-                    addToken(&list, TOKEN_INDENT, "    ");
+                    if (j == 1) {
+                        addToken(&list, TOKEN_INDENT, str, nowLine);
+                    } else {
+                        errorAtPos("multiple indents have suddenly increased at once", nowLine, code);
+                    }
                 }
             } else if (nowIndentCount < lastIndentCount) {
                 for (int j = 1; j <= (lastIndentCount - nowIndentCount); j++) {
-                    addToken(&list, TOKEN_DEDENT, "");
+                    if (j == 1) {
+                        addToken(&list, TOKEN_DEDENT, str, nowLine);
+                    } else {
+                        nextToken(&list);
+                    }
                 }
             }
         }
@@ -58,9 +73,10 @@ TokenList tokenizer(char *code) {
                 i++; // '\n' をスキップ
             }
             // printTokensで改行されないように\\n
-            addToken(&list, TOKEN_NEWLINE, "\\n");
+            addToken(&list, TOKEN_NEWLINE, "\\n", nowLine);
             lastIndentCount = nowIndentCount;
             nowIndentCount = 0;
+            nowLine++;
             i++;
             break;
         
@@ -71,9 +87,10 @@ TokenList tokenizer(char *code) {
             }
 
             // printTokensで改行されないように\\n
-            addToken(&list, TOKEN_NEWLINE, "\\n");
+            addToken(&list, TOKEN_NEWLINE, "\\n", nowLine);
             lastIndentCount = nowIndentCount;
             nowIndentCount = 0;
+            nowLine++;
             i++;
             break;
 
@@ -111,60 +128,60 @@ TokenList tokenizer(char *code) {
             // 閉じの "
             i++;
 
-            addToken(&list, TOKEN_STRING, str);
+            addToken(&list, TOKEN_STRING, str, nowLine);
             break;
 
         //記号
         case '+':
-            addToken(&list, TOKEN_PLUS, "+");
+            addToken(&list, TOKEN_PLUS, "+", nowLine);
             i++;
             break;
 
         case '-':
             if (code[i + 1] == '>') {
-                addToken(&list, TOKEN_ARROW, "->");
+                addToken(&list, TOKEN_ARROW, "->", nowLine);
                 i += 2; // -と>を消費
 
             } else {
-                addToken(&list, TOKEN_MINUS, "-");
+                addToken(&list, TOKEN_MINUS, "-", nowLine);
                 i++;
             }
             break;
 
         case '*':
-            addToken(&list, TOKEN_STAR, "*");
+            addToken(&list, TOKEN_STAR, "*", nowLine);
             i++;
             break;
 
         case '/':
-            addToken(&list, TOKEN_SLASH, "/");
+            addToken(&list, TOKEN_SLASH, "/", nowLine);
             i++;
             break;
 
         case '%':
-            addToken(&list, TOKEN_PERCENT, "%");
+            addToken(&list, TOKEN_PERCENT, "%", nowLine);
             i++;
             break;
 
         case '(':
-            addToken(&list, TOKEN_LPAREN, "(");
+            addToken(&list, TOKEN_LPAREN, "(", nowLine);
             i++;
             inParen = true;
             break;
 
         case ')':
-            addToken(&list, TOKEN_RPAREN, ")");
+            addToken(&list, TOKEN_RPAREN, ")", nowLine);
             i++;
             inParen = false;
             break;
 
         case ':':
-            addToken(&list, TOKEN_COLON, ":");
+            addToken(&list, TOKEN_COLON, ":", nowLine);
             i++;
             break;
 
         case ',':
-            addToken(&list, TOKEN_COMMA, ",");
+            addToken(&list, TOKEN_COMMA, ",", nowLine);
             i++;
             break;
 
@@ -172,9 +189,9 @@ TokenList tokenizer(char *code) {
             i++;
             if (code[i] == '=') {
                 i++;
-                addToken(&list, TOKEN_LE, "<=");
+                addToken(&list, TOKEN_LE, "<=", nowLine);
             } else {
-                addToken(&list, TOKEN_LT, "<");
+                addToken(&list, TOKEN_LT, "<", nowLine);
             }
             break;
 
@@ -182,9 +199,9 @@ TokenList tokenizer(char *code) {
             i++;
             if (code[i] == '=') {
                 i++;
-                addToken(&list, TOKEN_GE, ">=");
+                addToken(&list, TOKEN_GE, ">=", nowLine);
             } else {
-                addToken(&list, TOKEN_GT, ">");
+                addToken(&list, TOKEN_GT, ">", nowLine);
             }
             break;
 
@@ -192,9 +209,9 @@ TokenList tokenizer(char *code) {
             i++;
             if (code[i] == '=') {
                 i++;
-                addToken(&list, TOKEN_EQ, "==");
+                addToken(&list, TOKEN_EQ, "==", nowLine);
             } else {
-                addToken(&list, TOKEN_ASSIGN, "=");
+                addToken(&list, TOKEN_ASSIGN, "=", nowLine);
             }
             break;
 
@@ -202,7 +219,7 @@ TokenList tokenizer(char *code) {
             i++;
             if (code[i] == '=') {
                 i++;
-                addToken(&list, TOKEN_NE, "!=");
+                addToken(&list, TOKEN_NE, "!=", nowLine);
             } else {
                 // 許容されていない文字
                 printf("during lexical analysis, an invalid character was detected\ncharacter: !\n");
@@ -210,7 +227,7 @@ TokenList tokenizer(char *code) {
             break;
 
         case '.':
-            addToken(&list, TOKEN_DOT, ".");
+            addToken(&list, TOKEN_DOT, ".", nowLine);
             i++;
             break;
         
@@ -230,7 +247,7 @@ TokenList tokenizer(char *code) {
                     i++;
                 }
 
-                addToken(&list, TOKEN_NUMBER, num);
+                addToken(&list, TOKEN_NUMBER, num, nowLine);
 
             } else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') { // 識別子、キーワード
                 char *ident = malloc(2);
@@ -250,11 +267,13 @@ TokenList tokenizer(char *code) {
                 //キーワードや識別子を判断してTokenTypeを取得する
                 TokenType tt = checkTokenType(ident);
 
-                addToken(&list, tt, ident);
+                addToken(&list, tt, ident, nowLine);
 
             } else { // 許容されていない文字
-                printf("during lexical analysis, an invalid character was detected\ncharacter: %c\n", c);
-                exit(1);
+                char msg[128];
+                snprintf(msg, sizeof(msg), 
+                    "during lexical analysis, an invalid character was detected\ncharacter: %c", c);
+                errorAtPos(msg, nowLine, code);
             }
             break;
         }
@@ -266,12 +285,12 @@ TokenList tokenizer(char *code) {
         }
     }
 
-    addToken(&list, TOKEN_EOF, NULL);
+    addToken(&list, TOKEN_EOF, NULL, nowLine);
     return list;
 }
 
 // トークンを追加
-static void addToken(TokenList *list, TokenType type, const char *value) {
+static void addToken(TokenList *list, TokenType type, const char *value, int pos) {
     if (list->count >= list->capacity) {
         list->capacity = list->capacity ? list->capacity * 2 : 8;
         list->tokens = realloc(list->tokens,
@@ -281,6 +300,7 @@ static void addToken(TokenList *list, TokenType type, const char *value) {
     Token *t = &list->tokens[list->count++];
     t->type = type;
     t->value = value ? strdup(value) : NULL;
+    t->pos = pos;
 }
 
 // 識別子かキーワードのときTokenTypeは何か、を返す
@@ -299,6 +319,12 @@ TokenType checkTokenType(char *ident) {
         return TOKEN_IN;
     } else if (strcmp(ident, "return") == 0) {
         return TOKEN_RETURN;
+    } else if (strcmp(ident, "break") == 0) {
+        return TOKEN_BREAK;
+    } else if (strcmp(ident, "continue") == 0) {
+        return TOKEN_CONTINUE;
+    } else if (strcmp(ident, "pass") == 0) {
+        return TOKEN_PASS;
     } else if (strcmp(ident, "func") == 0) {
         return TOKEN_FUNC;
     } else if (strcmp(ident, "var") == 0) {
@@ -370,6 +396,8 @@ const char *tokenTypeToString(TokenType type) {
         case TOKEN_FOR:      return "FOR";
         case TOKEN_IN:       return "IN";
         case TOKEN_RETURN:   return "RETURN";
+        case TOKEN_BREAK:    return "BREAK";
+        case TOKEN_CONTINUE: return "CONTINUE";
         case TOKEN_PASS:     return "PASS";
         case TOKEN_FUNC:     return "FUNC";
         case TOKEN_VAR:      return "VAR";
