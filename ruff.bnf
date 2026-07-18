@@ -1,0 +1,22 @@
+<program> ::= <statement>*
+
+<statement> ::= <expr> ";"
+
+<expr> ::= <application>
+
+<application> ::= <atom>
+                | <application> "->" <atom>
+(補足:ここは構文解析器では<application> ::= <atom> ("->" <atom>)*と捉えている)
+
+<atom> ::= <literal>
+         | <ident>
+         | "(" <expr> ")"
+
+<literal> ::= <int>
+            | <float>
+            | <string>
+            | <bool>
+
+<ident> ::= <letter> (<letter> | <digit> | "_")*
+
+...
