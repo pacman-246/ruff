@@ -35,10 +35,12 @@ typedef struct Literal Literal;
 
 struct Literal {
     LiteralType type;
-    int i;
-    double d;
-    char *s;
-    bool b;
+    union {
+        int i;
+        double d;
+        char *s;
+        bool b;
+    };
 };
 
 // ノード
