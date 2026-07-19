@@ -13,3 +13,8 @@ tokenizer/tokenizer.h - 字句解析器のhファイル
 tokenizer/tokenizer.c - 字句解析器のcファイル  
 parser/parser.h - 構文解析器のhファイル  
 parser/parser.c - 構文解析器のcファイル  
+
+## 進み具合
+字句解析器、構文解析器完成済み
+意味解析（実行部分）は未実装
+よってruff.cもこれから変わっていく
