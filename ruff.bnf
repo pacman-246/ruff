@@ -1,0 +1,23 @@
+<program> ::= <statement>*
+
+<statement> ::= <application> ";"
+
+<application> ::= <atom>
+                | <application> "->" <atom>
+
+<atom> ::= <literal>
+         | <ident>
+         | <quote>
+         | "(" <application> ")"
+
+<literal> ::= <number>
+            | <string>
+            | <bool>
+            | <list>
+
+<list> ::= "[" <comma>? "]"
+<comma> ::= <application> ("," <application>)*
+
+<quote> ::= "$" <atom>
+
+...
