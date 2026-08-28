@@ -120,6 +120,10 @@ Value mapSecond(Value setValue, BuiltinFnCtx *ctx);
 Value builtinForeach(BuiltinFnCtx *ctx);
 Value foreachSecond(Value setValue, BuiltinFnCtx *ctx);
 Value builtinToString(BuiltinFnCtx *ctx);
+Value builtinAppend(BuiltinFnCtx *ctx);
+Value appendSecond(Value setValue, BuiltinFnCtx *ctx);
+Value builtinCons(BuiltinFnCtx *ctx);
+Value consSecond(Value setValue, BuiltinFnCtx *ctx);
 Environment *createGlobalEnvironment(Arena *arena);
 
 // 文字列関係
@@ -128,6 +132,7 @@ char *listToString(List *list, Arena *arena);
 
 // リスト関係
 List *rangeList(int start, int end, int pos, Arena *arena);
-void listAppend(List **list, Value value, Arena *arena);
+List *listCons(Value value, List *list, Arena *arena);
+List *listAppend(List *list, Value value, Arena *arena);
 
 #endif

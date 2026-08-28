@@ -631,7 +631,7 @@ Value mapSecond(Value setValue, BuiltinFnCtx *ctx) {
     List *afterList = NULL;
 
     while (beforeList != NULL) {
-        listAppend(&afterList, apply(setValue, beforeList->head, ctx->env, ctx->pos, ctx->arena), ctx->arena);
+        afterList = listAppend(afterList, apply(setValue, beforeList->head, ctx->env, ctx->pos, ctx->arena), ctx->arena);
         beforeList = beforeList->tail;
     }
 
@@ -689,8 +689,48 @@ Value builtinToString(BuiltinFnCtx *ctx) {
     return *result;
 }
 
+Value builtinAppend(BuiltinFnCtx *ctx) {
+    if (ctx->arg.type != VALUE_LIST) {
+        printf("TypeError: Line-%d\nThe first level \"append\" argument accepts the \"List\" type\n",
+        ctx->pos);
+        exit(1);
+    }
+
+    return makeClangFunction(
+        newClangFunction(appendSecond, ctx->arg, ctx->arena)
+    );
+}
+
+Value appendSecond(Value setValue, BuiltinFnCtx *ctx) {
+    List *newList = listAppend(setValue.listValue, ctx->arg, ctx->arena);
+    Value *newNode = arenaAlloc(ctx->arena, sizeof(Value));
+    newNode->type = VALUE_LIST;
+    newNode->listValue = newList;
+    return *newNode;
+}
+
+Value builtinCons(BuiltinFnCtx *ctx) {
+    return makeClangFunction(
+        newClangFunction(consSecond, ctx->arg, ctx->arena)
+    );
+}
+
+Value consSecond(Value setValue, BuiltinFnCtx *ctx) {
+    if (ctx->arg.type != VALUE_LIST) {
+        printf("TypeError: Line-%d\nThe second level \"cons\" argument accepts the \"List\" type\n",
+        ctx->pos);
+        exit(1);
+    }
+
+    List *newList = listCons(setValue, ctx->arg.listValue, ctx->arena);
+    Value *newNode = arenaAlloc(ctx->arena, sizeof(Value));
+    newNode->type = VALUE_LIST;
+    newNode->listValue = newList;
+    return *newNode;
+}
+
 // fizzbuzzに必要なもの+四則演算をとりあえず作る
-BuiltinEntry builtinFns[14] = {
+BuiltinEntry builtinFns[16] = {
     {"println", builtinPrintln},
     {"add", builtinAdd},
     {"sub", builtinSub},
@@ -704,14 +744,16 @@ BuiltinEntry builtinFns[14] = {
     {"range", builtinRange},
     {"map", builtinMap},
     {"foreach", builtinForeach},
-    {"toString", builtinToString}
+    {"toString", builtinToString},
+    {"append", builtinAppend},
+    {"cons", builtinCons}
 };
 
 Environment *createGlobalEnvironment(Arena *arena) {
     Environment *env = newEnvironment(NULL, arena);
 
     // ビルトイン関数を定義する
-    for (int i = 0; i < 14; i++) {
+    for (int i = 0; i < 16; i++) {
         Value *fn = arenaAlloc(arena, sizeof(Value));
         fn->type = VALUE_BUILTINFUNCTION;
         fn->builtinFnValue = builtinFns[i].fn;
@@ -845,24 +887,24 @@ List *rangeList(int start, int end, int pos, Arena *arena) {
     return list;
 }
 
-void listAppend(List **list, Value value, Arena *arena) {
-    List *newNode = arenaAlloc(arena, sizeof(List));
+List *listCons(Value value, List *list, Arena *arena) {
+    List *newList = arenaAlloc(arena, sizeof(List));
 
-    newNode->head = value;
-    newNode->tail = NULL;
+    newList->head = value;
+    newList->tail = list;
 
-    // 空リスト
-    if (*list == NULL) {
-        *list = newNode;
-        return;
+    return newList;
+}
+
+List *listAppend(List *list, Value value, Arena *arena) {
+    if (list == NULL) {
+        return listCons(value, NULL, arena);
     }
 
-    // 最後まで進む
-    List *current = *list;
+    List *newList = arenaAlloc(arena, sizeof(List));
 
-    while (current->tail != NULL) {
-        current = current->tail;
-    }
+    newList->head = list->head;
+    newList->tail = listAppend(list->tail, value, arena);
 
-    current->tail = newNode;
+    return newList;
 }
