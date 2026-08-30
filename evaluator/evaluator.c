@@ -729,8 +729,19 @@ Value consSecond(Value setValue, BuiltinFnCtx *ctx) {
     return *newNode;
 }
 
+Value builtinHead(BuiltinFnCtx *ctx) {
+    if (ctx->arg.type != VALUE_LIST) {
+        printf("TypeError: Line-%d\nThe first level \"head\" argument accepts the \"List\" type\n",
+        ctx->pos);
+        exit(1);
+    }
+
+    Value head = ctx->arg.listValue->head;
+    return head;
+}
+
 // fizzbuzzに必要なもの+四則演算をとりあえず作る
-BuiltinEntry builtinFns[16] = {
+BuiltinEntry builtinFns[17] = {
     {"println", builtinPrintln},
     {"add", builtinAdd},
     {"sub", builtinSub},
@@ -746,14 +757,15 @@ BuiltinEntry builtinFns[16] = {
     {"foreach", builtinForeach},
     {"toString", builtinToString},
     {"append", builtinAppend},
-    {"cons", builtinCons}
+    {"cons", builtinCons},
+    {"head", builtinHead}
 };
 
 Environment *createGlobalEnvironment(Arena *arena) {
     Environment *env = newEnvironment(NULL, arena);
 
     // ビルトイン関数を定義する
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < 17; i++) {
         Value *fn = arenaAlloc(arena, sizeof(Value));
         fn->type = VALUE_BUILTINFUNCTION;
         fn->builtinFnValue = builtinFns[i].fn;
