@@ -125,6 +125,7 @@ Value appendSecond(Value setValue, BuiltinFnCtx *ctx);
 Value builtinCons(BuiltinFnCtx *ctx);
 Value consSecond(Value setValue, BuiltinFnCtx *ctx);
 Value builtinHead(BuiltinFnCtx *ctx);
+Value builtinTail(BuiltinFnCtx *ctx);
 Environment *createGlobalEnvironment(Arena *arena);
 
 // 文字列関係

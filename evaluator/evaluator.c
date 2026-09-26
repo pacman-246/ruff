@@ -740,8 +740,21 @@ Value builtinHead(BuiltinFnCtx *ctx) {
     return head;
 }
 
-// fizzbuzzに必要なもの+四則演算をとりあえず作る
-BuiltinEntry builtinFns[17] = {
+Value builtinTail(BuiltinFnCtx *ctx) {
+    if (ctx->arg.type != VALUE_LIST) {
+        printf("TypeError: Line-%d\nThe first level \"tail\" argument accepts the \"List\" type\n",
+        ctx->pos);
+        exit(1);
+    }
+
+    List *newList = ctx->arg.listValue->tail;
+    Value *newNode = arenaAlloc(ctx->arena, sizeof(Value));
+    newNode->type = VALUE_LIST;
+    newNode->listValue = newList;
+    return *newNode;
+}
+
+BuiltinEntry builtinFns[18] = {
     {"println", builtinPrintln},
     {"add", builtinAdd},
     {"sub", builtinSub},
@@ -758,14 +771,15 @@ BuiltinEntry builtinFns[17] = {
     {"toString", builtinToString},
     {"append", builtinAppend},
     {"cons", builtinCons},
-    {"head", builtinHead}
+    {"head", builtinHead},
+    {"tail", builtinTail}
 };
 
 Environment *createGlobalEnvironment(Arena *arena) {
     Environment *env = newEnvironment(NULL, arena);
 
     // ビルトイン関数を定義する
-    for (int i = 0; i < 17; i++) {
+    for (int i = 0; i < 18; i++) {
         Value *fn = arenaAlloc(arena, sizeof(Value));
         fn->type = VALUE_BUILTINFUNCTION;
         fn->builtinFnValue = builtinFns[i].fn;
