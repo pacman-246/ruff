@@ -10,9 +10,7 @@ Value evaluator(Node *node, Environment *env, Arena *arena) {
             evaluator(node->as.prog.left, env, arena);
             evaluator(node->as.prog.right, env, arena);
 
-            Value *u = arenaAlloc(arena, sizeof(Value));
-            u->type = VALUE_UNIT;
-            return *u; // Unit
+            return newUnitValue(arena);
 
         case NODE_APP: // 関数適用
             Value func = evaluator(node->as.app.func, env, arena);
@@ -50,25 +48,16 @@ Value evaluator(Node *node, Environment *env, Arena *arena) {
                 list->tail = last;
             }
 
-            Value *result = arenaAlloc(arena, sizeof(Value));
-            result->type = VALUE_LIST;
-            result->listValue = list;
-
-            return *result;
+            return newListValue(list, arena);
 
         case NODE_IDENT: // 識別子
             return getValueFromIdent(node, env);
 
         case NODE_QUOTE: // quote
-            Value *q = arenaAlloc(arena, sizeof(Value));
-            q->type = VALUE_QUOTE;
-            q->quoteValue = node->as.quote.node;
-            return *q;
+            return newQuoteValue(node->as.quote.node, arena);
 
         default:
-            Value *u_ = arenaAlloc(arena, sizeof(Value));
-            u_->type = VALUE_UNIT;
-            return *u_; // Unit
+            return newUnitValue(arena);
     }
 }
 
@@ -235,13 +224,6 @@ BuiltinFnCtx *newBuiltinFnCtx(Value arg, Environment *env, int pos, Arena *arena
     return ctx;
 }
 
-Value makeClangFunction(ClangFunction clangFnValue) {
-    Value v;
-    v.type = VALUE_CLANGFUNCTION;
-    v.clangFnValue = clangFnValue;
-    return v;
-}
-
 ClangFunction newClangFunction(
     Value (*clangFnValue)(Value setValue, BuiltinFnCtx *ctx),
     Value setValue,
@@ -264,9 +246,7 @@ Value builtinPrintln(BuiltinFnCtx *ctx) {
         valueToString(ctx->arg, ctx->arena)
     );
 
-    Value *u = arenaAlloc(ctx->arena, sizeof(Value));
-    u->type = VALUE_UNIT;
-    return *u; // Unit
+    return newUnitValue(ctx->arena);
 }
 
 // 足し算
@@ -278,8 +258,9 @@ Value builtinAdd(BuiltinFnCtx *ctx) {
         exit(1);
     }
 
-    return makeClangFunction(
-        newClangFunction(addSecond, ctx->arg, ctx->arena)
+    return newClangFunctionValue(
+        newClangFunction(addSecond, ctx->arg, ctx->arena),
+        ctx->arena
     );
 }
 
@@ -290,10 +271,10 @@ Value addSecond(Value setValue, BuiltinFnCtx *ctx) {
         exit(1);
     }
 
-    Value *result = arenaAlloc(ctx->arena, sizeof(Value));
-    result->type = VALUE_NUMBER;
-    result->numberValue = setValue.numberValue + ctx->arg.numberValue;
-    return *result;
+    return newNumberValue(
+        setValue.numberValue + ctx->arg.numberValue,
+        ctx->arena
+    );
 }
 
 // 引き算
@@ -305,8 +286,9 @@ Value builtinSub(BuiltinFnCtx *ctx) {
         exit(1);
     }
 
-    return makeClangFunction(
-        newClangFunction(subSecond, ctx->arg, ctx->arena)
+    return newClangFunctionValue(
+        newClangFunction(subSecond, ctx->arg, ctx->arena),
+        ctx->arena
     );
 }
 
@@ -317,10 +299,10 @@ Value subSecond(Value setValue, BuiltinFnCtx *ctx) {
         exit(1);
     }
 
-    Value *result = arenaAlloc(ctx->arena, sizeof(Value));
-    result->type = VALUE_NUMBER;
-    result->numberValue = setValue.numberValue - ctx->arg.numberValue;
-    return *result;
+    return newNumberValue(
+        setValue.numberValue - ctx->arg.numberValue,
+        ctx->arena
+    );
 }
 
 // 掛け算
@@ -332,8 +314,9 @@ Value builtinMul(BuiltinFnCtx *ctx) {
         exit(1);
     }
 
-    return makeClangFunction(
-        newClangFunction(mulSecond, ctx->arg, ctx->arena)
+    return newClangFunctionValue(
+        newClangFunction(mulSecond, ctx->arg, ctx->arena),
+        ctx->arena
     );
 }
 
@@ -344,10 +327,10 @@ Value mulSecond(Value setValue, BuiltinFnCtx *ctx) {
         exit(1);
     }
 
-    Value *result = arenaAlloc(ctx->arena, sizeof(Value));
-    result->type = VALUE_NUMBER;
-    result->numberValue = setValue.numberValue * ctx->arg.numberValue;
-    return *result;
+    return newNumberValue(
+        setValue.numberValue * ctx->arg.numberValue,
+        ctx->arena
+    );
 }
 
 // 割り算
@@ -359,8 +342,9 @@ Value builtinDiv(BuiltinFnCtx *ctx) {
         exit(1);
     }
 
-    return makeClangFunction(
-        newClangFunction(divSecond, ctx->arg, ctx->arena)
+    return newClangFunctionValue(
+        newClangFunction(divSecond, ctx->arg, ctx->arena),
+        ctx->arena
     );
 }
 
@@ -371,10 +355,10 @@ Value divSecond(Value setValue, BuiltinFnCtx *ctx) {
         exit(1);
     }
 
-    Value *result = arenaAlloc(ctx->arena, sizeof(Value));
-    result->type = VALUE_NUMBER;
-    result->numberValue = setValue.numberValue / ctx->arg.numberValue;
-    return *result;
+    return newNumberValue(
+        setValue.numberValue / ctx->arg.numberValue,
+        ctx->arena
+    );
 }
 
 // あまり
@@ -386,8 +370,9 @@ Value builtinMod(BuiltinFnCtx *ctx) {
         exit(1);
     }
 
-    return makeClangFunction(
-        newClangFunction(modSecond, ctx->arg, ctx->arena)
+    return newClangFunctionValue(
+        newClangFunction(modSecond, ctx->arg, ctx->arena),
+        ctx->arena
     );
 }
 
@@ -398,10 +383,10 @@ Value modSecond(Value setValue, BuiltinFnCtx *ctx) {
         exit(1);
     }
 
-    Value *result = arenaAlloc(ctx->arena, sizeof(Value));
-    result->type = VALUE_NUMBER;
-    result->numberValue = fmod(setValue.numberValue, ctx->arg.numberValue);
-    return *result;
+    return newNumberValue(
+        fmod(setValue.numberValue, ctx->arg.numberValue),
+        ctx->arena
+    );
 }
 
 Value builtinIf(BuiltinFnCtx *ctx) {
@@ -411,19 +396,22 @@ Value builtinIf(BuiltinFnCtx *ctx) {
         exit(1);
     }
 
-    return makeClangFunction(
-        newClangFunction(ifSecond, ctx->arg, ctx->arena)
+    return newClangFunctionValue(
+        newClangFunction(ifSecond, ctx->arg, ctx->arena),
+        ctx->arena
     );
 }
 
 Value ifSecond(Value setValue, BuiltinFnCtx *ctx) {
     if (setValue.boolValue) {
-        return makeClangFunction(
-            newClangFunction(ifThird, ctx->arg, ctx->arena)
+        return newClangFunctionValue(
+            newClangFunction(ifThird, ctx->arg, ctx->arena),
+            ctx->arena
         );
     } else {
-        return makeClangFunction(
-            newClangFunction(ifFourth, ctx->arg, ctx->arena)
+        return newClangFunctionValue(
+            newClangFunction(ifFourth, ctx->arg, ctx->arena),
+            ctx->arena
         );
     }
 }
@@ -439,8 +427,9 @@ Value ifFourth(Value setValue, BuiltinFnCtx *ctx) {
 }
 
 Value builtinEqual(BuiltinFnCtx *ctx) {
-    return makeClangFunction(
-        newClangFunction(equalSecond, ctx->arg, ctx->arena)
+    return newClangFunctionValue(
+        newClangFunction(equalSecond, ctx->arg, ctx->arena),
+        ctx->arena
     );
 }
 
@@ -517,8 +506,9 @@ Value builtinLet(BuiltinFnCtx *ctx) {
         exit(1);
     }
 
-    return makeClangFunction(
-        newClangFunction(letSecond, ctx->arg, ctx->arena)
+    return newClangFunctionValue(
+        newClangFunction(letSecond, ctx->arg, ctx->arena),
+        ctx->arena
     );
 }
 
@@ -527,9 +517,7 @@ Value letSecond(Value setValue, BuiltinFnCtx *ctx) {
 
     define(ctx->env, constName, ctx->arg, ctx->arena);
 
-    Value *u = arenaAlloc(ctx->arena, sizeof(Value));
-    u->type = VALUE_UNIT;
-    return *u; // Unit
+    return newUnitValue(ctx->arena);
 }
 
 Value builtinFn(BuiltinFnCtx *ctx) {
@@ -540,8 +528,9 @@ Value builtinFn(BuiltinFnCtx *ctx) {
         exit(1);
     }
 
-    return makeClangFunction(
-        newClangFunction(fnSecond, ctx->arg, ctx->arena)
+    return newClangFunctionValue(
+        newClangFunction(fnSecond, ctx->arg, ctx->arena),
+        ctx->arena
     );
 }
 
@@ -554,17 +543,12 @@ Value fnSecond(Value setValue, BuiltinFnCtx *ctx) {
 
     char *argName = setValue.quoteValue->as.ident.ident;
 
-    Value *v = arenaAlloc(ctx->arena, sizeof(Value));
-    v->type = VALUE_FUNCTION;
-
     Function *f = arenaAlloc(ctx->arena, sizeof(Function));
     f->body = ctx->arg.quoteValue;
     f->param = argName;
     f->parentEnv = ctx->env;
 
-    v->functionValue = *f;
-
-    return *v;
+    return newFunctionValue(*f, ctx->arena);
 }
 
 Value builtinRange(BuiltinFnCtx *ctx) {
@@ -575,8 +559,9 @@ Value builtinRange(BuiltinFnCtx *ctx) {
         exit(1);
     }
 
-    return makeClangFunction(
-        newClangFunction(rangeSecond, ctx->arg, ctx->arena)
+    return newClangFunctionValue(
+        newClangFunction(rangeSecond, ctx->arg, ctx->arena),
+        ctx->arena
     );
 }
 
@@ -594,16 +579,15 @@ Value rangeSecond(Value setValue, BuiltinFnCtx *ctx) {
         exit(1);
     }
 
-    Value *result = arenaAlloc(ctx->arena, sizeof(Value));
-    result->type = VALUE_LIST;
-    result->listValue = rangeList(
-        setValue.numberValue,
-        ctx->arg.numberValue,
-        ctx->pos,
+    return newListValue(
+        rangeList(
+            setValue.numberValue,
+            ctx->arg.numberValue,
+            ctx->pos,
+            ctx->arena
+        ),
         ctx->arena
     );
-
-    return *result;
 }
 
 Value builtinMap(BuiltinFnCtx *ctx) {
@@ -615,8 +599,9 @@ Value builtinMap(BuiltinFnCtx *ctx) {
         exit(1);
     }
 
-    return makeClangFunction(
-        newClangFunction(mapSecond, ctx->arg, ctx->arena)
+    return newClangFunctionValue(
+        newClangFunction(mapSecond, ctx->arg, ctx->arena),
+        ctx->arena
     );
 }
 
@@ -635,11 +620,7 @@ Value mapSecond(Value setValue, BuiltinFnCtx *ctx) {
         beforeList = beforeList->tail;
     }
 
-    Value *result = arenaAlloc(ctx->arena, sizeof(Value));
-    result->type = VALUE_LIST;
-    result->listValue = afterList;
-
-    return *result;
+    return newListValue(afterList, ctx->arena);
 }
 
 Value builtinForeach(BuiltinFnCtx *ctx) {
@@ -651,8 +632,9 @@ Value builtinForeach(BuiltinFnCtx *ctx) {
         exit(1);
     }
 
-    return makeClangFunction(
-        newClangFunction(foreachSecond, ctx->arg, ctx->arena)
+    return newClangFunctionValue(
+        newClangFunction(foreachSecond, ctx->arg, ctx->arena),
+        ctx->arena
     );
 }
 
@@ -670,10 +652,7 @@ Value foreachSecond(Value setValue, BuiltinFnCtx *ctx) {
         list = list->tail;
     }
 
-    Value *u = arenaAlloc(ctx->arena, sizeof(Value));
-    u->type = VALUE_UNIT;
-
-    return *u;
+    return newUnitValue(ctx->arena);
 }
 
 Value builtinToString(BuiltinFnCtx *ctx) {
@@ -682,11 +661,7 @@ Value builtinToString(BuiltinFnCtx *ctx) {
         ctx->arena
     );
 
-    Value *result = arenaAlloc(ctx->arena, sizeof(Value));
-    result->type = VALUE_STRING;
-    result->stringValue = str;
-
-    return *result;
+    return newStringValue(str, ctx->arena);
 }
 
 Value builtinAppend(BuiltinFnCtx *ctx) {
@@ -696,22 +671,21 @@ Value builtinAppend(BuiltinFnCtx *ctx) {
         exit(1);
     }
 
-    return makeClangFunction(
-        newClangFunction(appendSecond, ctx->arg, ctx->arena)
+    return newClangFunctionValue(
+        newClangFunction(appendSecond, ctx->arg, ctx->arena),
+        ctx->arena
     );
 }
 
 Value appendSecond(Value setValue, BuiltinFnCtx *ctx) {
     List *newList = listAppend(setValue.listValue, ctx->arg, ctx->arena);
-    Value *newNode = arenaAlloc(ctx->arena, sizeof(Value));
-    newNode->type = VALUE_LIST;
-    newNode->listValue = newList;
-    return *newNode;
+    return newListValue(newList, ctx->arena);
 }
 
 Value builtinCons(BuiltinFnCtx *ctx) {
-    return makeClangFunction(
-        newClangFunction(consSecond, ctx->arg, ctx->arena)
+    return newClangFunctionValue(
+        newClangFunction(consSecond, ctx->arg, ctx->arena),
+        ctx->arena
     );
 }
 
@@ -723,10 +697,7 @@ Value consSecond(Value setValue, BuiltinFnCtx *ctx) {
     }
 
     List *newList = listCons(setValue, ctx->arg.listValue, ctx->arena);
-    Value *newNode = arenaAlloc(ctx->arena, sizeof(Value));
-    newNode->type = VALUE_LIST;
-    newNode->listValue = newList;
-    return *newNode;
+    return newListValue(newList, ctx->arena);
 }
 
 Value builtinHead(BuiltinFnCtx *ctx) {
@@ -748,10 +719,7 @@ Value builtinTail(BuiltinFnCtx *ctx) {
     }
 
     List *newList = ctx->arg.listValue->tail;
-    Value *newNode = arenaAlloc(ctx->arena, sizeof(Value));
-    newNode->type = VALUE_LIST;
-    newNode->listValue = newList;
-    return *newNode;
+    return newListValue(newList, ctx->arena);
 }
 
 BuiltinEntry builtinFns[18] = {
@@ -780,23 +748,17 @@ Environment *createGlobalEnvironment(Arena *arena) {
 
     // ビルトイン関数を定義する
     for (int i = 0; i < 18; i++) {
-        Value *fn = arenaAlloc(arena, sizeof(Value));
-        fn->type = VALUE_BUILTINFUNCTION;
-        fn->builtinFnValue = builtinFns[i].fn;
+        Value fn = newBuiltinFnValue(builtinFns[i].fn, arena);
 
-        define(env, builtinFns[i].name, *fn, arena);
+        define(env, builtinFns[i].name, fn, arena);
     }
 
     // 定数も定義
-    Value *trueValue = arenaAlloc(arena, sizeof(Value));
-    trueValue->type = VALUE_BOOL;
-    trueValue->boolValue = true;
-    define(env, "true", *trueValue, arena);
+    Value trueValue = newBoolValue(true, arena);
+    define(env, "true", trueValue, arena);
 
-    Value *falseValue = arenaAlloc(arena, sizeof(Value));
-    falseValue->type = VALUE_BOOL;
-    falseValue->boolValue = false;
-    define(env, "false", *falseValue, arena);
+    Value falseValue = newBoolValue(false, arena);
+    define(env, "false", falseValue, arena);
 
     return env;
 }
@@ -933,4 +895,67 @@ List *listAppend(List *list, Value value, Arena *arena) {
     newList->tail = listAppend(list->tail, value, arena);
 
     return newList;
+}
+
+// value
+Value newNumberValue(double num, Arena *arena) {
+    Value *newValue = arenaAlloc(arena, sizeof(Value));
+    newValue->type = VALUE_NUMBER;
+    newValue->numberValue = num;
+    return *newValue;
+}
+
+Value newStringValue(char *str, Arena *arena) {
+    Value *newValue = arenaAlloc(arena, sizeof(Value));
+    newValue->type = VALUE_STRING;
+    newValue->stringValue = str;
+    return *newValue;
+}
+
+Value newBoolValue(bool bool_, Arena *arena) {
+    Value *newValue = arenaAlloc(arena, sizeof(Value));
+    newValue->type = VALUE_BOOL;
+    newValue->boolValue = bool_;
+    return *newValue;
+}
+
+Value newUnitValue(Arena *arena) {
+    Value *newValue = arenaAlloc(arena, sizeof(Value));
+    newValue->type = VALUE_UNIT;
+    return *newValue;
+}
+
+Value newFunctionValue(Function func, Arena *arena) {
+    Value *newValue = arenaAlloc(arena, sizeof(Value));
+    newValue->type = VALUE_FUNCTION;
+    newValue->functionValue = func;
+    return *newValue;
+}
+
+Value newBuiltinFnValue(Value (*builtinFnValue)(BuiltinFnCtx *ctx), Arena *arena) {
+    Value *newValue = arenaAlloc(arena, sizeof(Value));
+    newValue->type = VALUE_BUILTINFUNCTION;
+    newValue->builtinFnValue = builtinFnValue;
+    return *newValue;
+}
+
+Value newClangFunctionValue(ClangFunction cfunc, Arena *arena) {
+    Value *newValue = arenaAlloc(arena, sizeof(Value));
+    newValue->type = VALUE_CLANGFUNCTION;
+    newValue->clangFnValue = cfunc;
+    return *newValue;
+}
+
+Value newListValue(List *list, Arena *arena) {
+    Value *newValue = arenaAlloc(arena, sizeof(Value));
+    newValue->type = VALUE_LIST;
+    newValue->listValue = list;
+    return *newValue;
+}
+
+Value newQuoteValue(Node *quote, Arena *arena) {
+    Value *newValue = arenaAlloc(arena, sizeof(Value));
+    newValue->type = VALUE_QUOTE;
+    newValue->quoteValue = quote;
+    return *newValue;
 }

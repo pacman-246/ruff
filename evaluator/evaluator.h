@@ -90,7 +90,6 @@ struct BuiltinFnCtx {
 };
 BuiltinFnCtx *newBuiltinFnCtx(Value arg, Environment *env, int pos, Arena *arena);
 
-Value makeClangFunction(ClangFunction clangFnValue);
 ClangFunction newClangFunction(Value (*clangFnValue)(Value setValue, BuiltinFnCtx *ctx), Value setValue, Arena *arena);
 Value builtinPrintln(BuiltinFnCtx *ctx);
 Value builtinAdd(BuiltinFnCtx *ctx);
@@ -136,5 +135,16 @@ char *listToString(List *list, Arena *arena);
 List *rangeList(int start, int end, int pos, Arena *arena);
 List *listCons(Value value, List *list, Arena *arena);
 List *listAppend(List *list, Value value, Arena *arena);
+
+// value
+Value newNumberValue(double num, Arena *arena);
+Value newStringValue(char *str, Arena *arena);
+Value newBoolValue(bool bool_, Arena *arena);
+Value newUnitValue(Arena *arena);
+Value newFunctionValue(Function func, Arena *arena);
+Value newBuiltinFnValue(Value (*builtinFnValue)(BuiltinFnCtx *ctx), Arena *arena);
+Value newClangFunctionValue(ClangFunction cfunc, Arena *arena);
+Value newListValue(List *list, Arena *arena);
+Value newQuoteValue(Node *quote, Arena *arena);
 
 #endif
